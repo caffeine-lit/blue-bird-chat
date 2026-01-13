@@ -56,8 +56,11 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# --- 3. UPLOAD TRANSCRIPTS ---
+# --- 3. UPLOAD & SELECT TRANSCRIPTS ---
 st.title("🤖 Intelligent Transcript Chat")
+
+if "transcripts" not in st.session_state:
+    st.session_state.transcripts = {}
 
 st.subheader("1. Upload Transcripts")
 uploaded_files = st.file_uploader(
@@ -66,21 +69,27 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True
 )
 
-if not uploaded_files:
+# Add new uploads to session state
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        if uploaded_file.name not in st.session_state.transcripts:
+            st.session_state.transcripts[uploaded_file.name] = uploaded_file.getvalue().decode("utf-8")
+
+if not st.session_state.transcripts:
     st.info("👋 Welcome! Please upload transcript files above to start the chat.")
     st.stop()
 
-# Combine content
-combined_content = ""
-file_names = []
-for uploaded_file in uploaded_files:
-    # Read and decode
-    content = uploaded_file.getvalue().decode("utf-8")
-    combined_content += f"\n\n--- SOURCE: {uploaded_file.name} ---\n\n"
-    combined_content += content
-    file_names.append(uploaded_file.name)
+# Selection Menu
+st.subheader("2. Select Context")
+transcript_options = list(st.session_state.transcripts.keys())
+selected_transcript_name = st.selectbox(
+    "Choose a transcript to analyze:",
+    options=transcript_options,
+    index=len(transcript_options)-1 # Default to most recent upload
+)
 
-TRANSCRIPT = combined_content
+TRANSCRIPT = st.session_state.transcripts[selected_transcript_name]
+file_names = [selected_transcript_name]
 
 # Manage History Reset on Content Change
 current_content_hash = hash(TRANSCRIPT)
